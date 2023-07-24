@@ -16,6 +16,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 public class photo_option extends AppCompatActivity {
 
     // Upload Button
@@ -28,6 +32,9 @@ public class photo_option extends AppCompatActivity {
     private static final int REQUEST_CAMERA_PERMISSION_CODE = 1;
     private static final int REQUEST_IMAGE_CAPTURE = 2;
     private static final int REQUEST_IMAGE_UPLOAD = 3;
+
+    // Global Uri variable to store the currently displayed image URI
+    private Uri currentImageUri = null;
 
 
     @Override
@@ -99,19 +106,45 @@ public class photo_option extends AppCompatActivity {
                 if (data != null) {
                     // Get the url of the image from data (image chooser)
                     Uri selectedImageUri = data.getData();
-                    if (null != selectedImageUri) {
-                        // update the preview image in the layout
-                        IVPreviewImage.setImageURI(selectedImageUri);
+                    if (selectedImageUri != null) {
+                        // Update the currentImageUri with the new image URI
+                        currentImageUri = selectedImageUri;
+                        // Update the preview image in the layout
+                        IVPreviewImage.setImageURI(currentImageUri);
                     }
                 }
             }
-            else{
+            else if (requestCode == REQUEST_IMAGE_CAPTURE) {
                 // Image was captured using the camera
                 Bundle extras = data.getExtras();
                 Bitmap imageBitmap = (Bitmap) extras.get("data");
-                // Set captured image to ImageView
-                IVPreviewImage.setImageBitmap(imageBitmap);
+
+                // Save the bitmap to a file
+                File imageFile = saveImageToInternalStorage(imageBitmap);
+
+                // Convert the file path to a content URI
+                currentImageUri = Uri.fromFile(imageFile);
+
+                // Update the preview image in the layout
+                IVPreviewImage.setImageURI(currentImageUri);
             }
         }
+    }
+
+    public File saveImageToInternalStorage(Bitmap bitmap) {
+        // Create a file to save the image
+        File imagesDir = getFilesDir();
+        File imageFile = new File(imagesDir, "captured_image.jpg");
+
+        try {
+            // Compress the bitmap and save it to the file
+            FileOutputStream fos = new FileOutputStream(imageFile);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return imageFile;
     }
 }
