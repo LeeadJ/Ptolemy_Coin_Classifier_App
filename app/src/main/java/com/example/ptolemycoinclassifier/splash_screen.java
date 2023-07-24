@@ -31,7 +31,7 @@ public class splash_screen extends AppCompatActivity {
         h.postDelayed(new Runnable() {
             @Override
             public void run() {
-                Intent intent = new Intent(splash_screen.this, MainActivity.class);
+                Intent intent = new Intent(splash_screen.this, photo_option.class);
                 startActivity(intent);
                 finish();
             }
