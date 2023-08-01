@@ -4,11 +4,12 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
 
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -33,9 +34,11 @@ public class photo_option extends AppCompatActivity {
     private static final int REQUEST_IMAGE_CAPTURE = 2;
     private static final int REQUEST_IMAGE_UPLOAD = 3;
 
+
     // Global Uri variable to store the currently displayed image URI
     private Uri currentImageUri = null;
 
+    private Bitmap selectedImageBitmap = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +74,10 @@ public class photo_option extends AppCompatActivity {
         });
     }
 
+    /**
+     * Function to handle the camera capture (when "Open Camera" button is clicked).
+     * @param view The view from which the function is called.
+     */
     public void captureImage(View view){
         // check for permission for camera
         if(ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
@@ -84,7 +91,9 @@ public class photo_option extends AppCompatActivity {
         startActivityForResult(intent, REQUEST_IMAGE_CAPTURE);
     }
 
-    // this function is triggered when the Upload Image Button is clicked
+    /**
+     * Function to handle image chooser (when "Upload Image" button is clicked).
+     */
     void imageChooser() {
         // create an instance of the intent of the type image
         Intent intent = new Intent();
@@ -95,7 +104,13 @@ public class photo_option extends AppCompatActivity {
         startActivityForResult(Intent.createChooser(intent, "Upload Image"), REQUEST_IMAGE_UPLOAD);
     }
 
-    // this function is triggered when user selects the image from the imageChooser
+
+    /**
+     * Function to handle the result after capturing or selecting an image.
+     * @param requestCode The request code provided when starting the activity.
+     * @param resultCode The result code returned by the activity.
+     * @param data The intent data containing the result.
+     */
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
@@ -109,8 +124,10 @@ public class photo_option extends AppCompatActivity {
                     if (selectedImageUri != null) {
                         // Update the currentImageUri with the new image URI
                         currentImageUri = selectedImageUri;
-                        // Update the preview image in the layout
-                        IVPreviewImage.setImageURI(currentImageUri);
+                        // Always navigate to ImageConfirmationActivity with the selected image URI
+                        Intent imageConfirmationIntent = new Intent(photo_option.this, ImageConfirmationActivity.class);
+                        imageConfirmationIntent.setData(currentImageUri);
+                        startActivity(imageConfirmationIntent);
                     }
                 }
             }
@@ -119,18 +136,25 @@ public class photo_option extends AppCompatActivity {
                 Bundle extras = data.getExtras();
                 Bitmap imageBitmap = (Bitmap) extras.get("data");
 
-                // Save the bitmap to a file
+                // Save the captured image to a file
                 File imageFile = saveImageToInternalStorage(imageBitmap);
 
                 // Convert the file path to a content URI
                 currentImageUri = Uri.fromFile(imageFile);
 
-                // Update the preview image in the layout
-                IVPreviewImage.setImageURI(currentImageUri);
+                // Navigate to ImageConfirmationActivity with the captured image URI
+                Intent imageConfirmationIntent = new Intent(photo_option.this, ImageConfirmationActivity.class);
+                imageConfirmationIntent.setData(currentImageUri);
+                startActivity(imageConfirmationIntent);
             }
         }
     }
 
+    /**
+     * Function to save the bitmap to internal storage.
+     * @param bitmap The bitmap image to be saved.
+     * @return The file path where the image is saved.
+     */
     public File saveImageToInternalStorage(Bitmap bitmap) {
         // Create a file to save the image
         File imagesDir = getFilesDir();
