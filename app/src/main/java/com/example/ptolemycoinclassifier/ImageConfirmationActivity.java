@@ -1,7 +1,9 @@
 package com.example.ptolemycoinclassifier;
 
 import android.content.Intent;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,6 +12,14 @@ import android.widget.Button;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import org.tensorflow.lite.Interpreter;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
 
 public class ImageConfirmationActivity extends AppCompatActivity {
 
@@ -20,6 +30,9 @@ public class ImageConfirmationActivity extends AppCompatActivity {
     // Variables to store image data
     private Bitmap selectedImageBitmap;
     private Uri capturedImageUri;
+
+    // Interpreter variable for the TensorFlow Lite model
+    Interpreter tfliteInterpreter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +59,13 @@ public class ImageConfirmationActivity extends AppCompatActivity {
             confirmedImageView.setImageURI(capturedImageUri);
         }
 
+        try {
+            // Load the TensorFlow Lite model from the assets folder
+            tfliteInterpreter = new Interpreter(loadModelFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // Handle the "Choose New Image" button click
         chooseNewImageButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -61,24 +81,55 @@ public class ImageConfirmationActivity extends AppCompatActivity {
         continueButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Add your code to proceed to the next step/activity
-                // For example, you can pass the image URI to the next activity for further processing
-
                 // Check if the selectedImageBitmap is not null (meaning the image is displayed in the ImageView)
                 if (selectedImageBitmap != null) {
-                    // Resize the selectedImageBitmap to 150x150 matrix
-                    int targetWidth = 150;
-                    int targetHeight = 150;
-                    Bitmap resizedBitmap = getResizedBitmap(selectedImageBitmap, targetWidth, targetHeight);
+                    try {
+                        // Resize the selectedImageBitmap to 150x150 matrix
+                        int targetWidth = 150;
+                        int targetHeight = 150;
+                        Bitmap resizedBitmap = getResizedBitmap(selectedImageBitmap, targetWidth, targetHeight);
 
-                    // Convert the resized bitmap to RGB format
-                    Bitmap rgbBitmap = getRGBBitmap(resizedBitmap);
+                        // Convert the resized bitmap to RGB format
+                        Bitmap rgbBitmap = getRGBBitmap(resizedBitmap);
 
-                    // Now you have the resized and RGB converted bitmap ready for further processing
-                    // You can pass the rgbBitmap to your model for inference, save it to a file, or do any other processing as needed.
+                        // Prepare the input tensor for the model.
+                        float[][][][] inputTensor = new float[1][150][150][3];
+                        for (int i = 0; i < 150; i++) {
+                            for (int j = 0; j < 150; j++) {
+                                int pixel = rgbBitmap.getPixel(i, j);
+                                inputTensor[0][i][j][0] = Color.red(pixel) / 255.0f;
+                                inputTensor[0][i][j][1] = Color.green(pixel) / 255.0f;
+                                inputTensor[0][i][j][2] = Color.blue(pixel) / 255.0f;
+                            }
+                        }
+
+                        // Perform inference using the TensorFlow Lite model
+                        float[][] outputTensor = new float[1][5]; // Replace '5' with the number of output classes in your model
+                        tfliteInterpreter.run(inputTensor, outputTensor);
+
+                        // Now you have the inference results in 'outputTensor'
+                        // You can process the results as per your requirement
+                        // For example, you can find the index of the highest probability to get the predicted class.
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        // Handle the exception here, for example, show an error message to the user
+                    }
                 }
             }
         });
+    }
+
+    // Function to load the TensorFlow Lite model file from the assets folder
+    public MappedByteBuffer loadModelFile() throws IOException {
+        // Load the model file from the assets folder
+        AssetFileDescriptor fileDescriptor = getAssets().openFd("resnet50.tflite");
+        FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+        FileChannel fileChannel = inputStream.getChannel();
+        long startOffset = fileDescriptor.getStartOffset();
+        long declaredLength = fileDescriptor.getDeclaredLength();
+
+        // Map the model file into memory
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
     /**
