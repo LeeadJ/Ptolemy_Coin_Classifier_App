@@ -7,12 +7,19 @@
     android:gravity="center"
     android:background="#D7BE69">
 
+
     <ImageView
         android:id="@+id/confirmedImageView"
         android:layout_width="match_parent"
         android:layout_height="400dp"
-        android:adjustViewBounds="true"
-         />
+        android:adjustViewBounds="true" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -21,7 +28,7 @@
 
         <Button
             android:id="@+id/chooseNewImageButton"
-            android:layout_width="0dp"
+            android:layout_width="1dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Choose New Image"
@@ -41,5 +48,7 @@
             android:backgroundTint="@color/black"
             android:textSize="20sp" />
     </LinearLayout>
+
+
 
 </LinearLayout>
