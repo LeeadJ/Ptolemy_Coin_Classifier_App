@@ -8,7 +8,6 @@ import android.graphics.Bitmap;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.View;
@@ -20,7 +19,6 @@ import java.io.IOException;
 
 public class photo_option extends AppCompatActivity
 {
-
     // Upload Button
     Button uploadBtn, cameraBtn ;
 
@@ -33,7 +31,7 @@ public class photo_option extends AppCompatActivity
     private static final int REQUEST_IMAGE_UPLOAD = 3;
 
 
-    // Global Uri variable to store the currently displayed image URI
+    // Global Bitmap variable to store the currently selected image
     private Bitmap selectedImageBitmap = null;
 
     @Override
@@ -49,7 +47,7 @@ public class photo_option extends AppCompatActivity
 
         setContentView(R.layout.activity_photo_option);
 
-        // register the UI widgets with their appropriate IDs
+        // Register UI widgets with their IDs
         uploadBtn = findViewById(R.id.uploadImageBtn);
         cameraBtn = findViewById(R.id.openCameraBtn);
         IVPreviewImage = findViewById(R.id.image_view);
@@ -65,7 +63,7 @@ public class photo_option extends AppCompatActivity
             IVPreviewImage.setImageBitmap(selectedImageBitmap);
 
 
-        // handle the Choose Image button to trigger the image chooser function
+        // Handle "Choose Image" button click
         uploadBtn.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -74,6 +72,7 @@ public class photo_option extends AppCompatActivity
             }
         });
 
+        // Handle "Open Camera" button click
         cameraBtn.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -83,10 +82,7 @@ public class photo_option extends AppCompatActivity
         });
     }
 
-    /**
-     * Function to handle the camera capture (when "Open Camera" button is clicked).
-     * @param view The view from which the function is called.
-     */
+    // Function to handle camera capture
     public void captureImage(View view)
     {
         // check for permission for camera
@@ -96,52 +92,44 @@ public class photo_option extends AppCompatActivity
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION_CODE);
             return;
         }
-
         // Launch camera intent to capture image
         Intent intent = new Intent((MediaStore.ACTION_IMAGE_CAPTURE));
         startActivityForResult(intent, REQUEST_IMAGE_CAPTURE);
     }
 
-    /**
-     * Function to handle image chooser (when "Upload Image" button is clicked).
-     */
+    // Function to handle image chooser
     void imageChooser()
     {
-        // create an instance of the intent of the type image
         Intent intent = new Intent();
         intent.setType("image/*");
         intent.setAction(Intent.ACTION_GET_CONTENT);
-
-        // pass the constant to compare it with the returned requestCode
         startActivityForResult(Intent.createChooser(intent, "Upload Image"), REQUEST_IMAGE_UPLOAD);
     }
 
 
-    /**
-     * Function to handle the result after capturing or selecting an image.
-     * @param requestCode The request code provided when starting the activity.
-     * @param resultCode The result code returned by the activity.
-     * @param data The intent data containing the result.
-     */
+    // Function to handle the result after capturing or selecting an image
     public void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK)
-        {
-            if (requestCode == REQUEST_IMAGE_UPLOAD)
-            {
-                if (data != null)
-                {
-                    // Get the URI of the selected image
-                    Uri selectedImageUri = data.getData();
-                    try {
+        if (resultCode == RESULT_OK) {
+            if (requestCode == REQUEST_IMAGE_UPLOAD) {
+                if (data != null) {
+                    try
+                    {
                         // Convert the selected image URI to a Bitmap
-                        selectedImageBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImageUri);
-                        // Navigate to ImageConfirmationActivity with the selected image bitmap
+                        selectedImageBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), data.getData());
+
+                        // Save the selected Bitmap to a file
+                        File imageFile = saveImageToInternalStorage(selectedImageBitmap);
+
+                        // Pass the file path to the ImageConfirmationActivity
                         Intent imageConfirmationIntent = new Intent(photo_option.this, ImageConfirmationActivity.class);
-                        imageConfirmationIntent.putExtra("selectedImage", selectedImageBitmap);
+                        imageConfirmationIntent.putExtra("selectedImageFilePath", imageFile.getAbsolutePath());
                         startActivity(imageConfirmationIntent);
-                    } catch (IOException e) {
+
+                    }
+                    catch (IOException e)
+                    {
                         e.printStackTrace();
                     }
                 }
@@ -149,32 +137,29 @@ public class photo_option extends AppCompatActivity
             else if (requestCode == REQUEST_IMAGE_CAPTURE)
             {
                 Bundle extras = data.getExtras();
-                // Retrieve the captured image bitmap
-                Bitmap imageBitmap = (Bitmap) extras.get("data");
-                // Navigate to ImageConfirmationActivity with the captured image bitmap
+                selectedImageBitmap = (Bitmap) extras.get("data");
                 Intent imageConfirmationIntent = new Intent(photo_option.this, ImageConfirmationActivity.class);
-                imageConfirmationIntent.putExtra("selectedImage", imageBitmap);
+                imageConfirmationIntent.putExtra("selectedImageBitmap", selectedImageBitmap);
                 startActivity(imageConfirmationIntent);
             }
         }
     }
 
-    /**
-     * Function to save the bitmap to internal storage.
-     * @param bitmap The bitmap image to be saved.
-     * @return The file path where the image is saved.
-     */
+    // Function to save the bitmap to internal storage
     public File saveImageToInternalStorage(Bitmap bitmap)
     {
         // Create a file to save the image
         File imagesDir = getFilesDir();
         File imageFile = new File(imagesDir, "captured_image.jpg");
-        try {
+        try
+        {
             // Compress the bitmap and save it to the file
             FileOutputStream fos = new FileOutputStream(imageFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
             fos.close();
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             e.printStackTrace();
         }
         return imageFile;
